@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from '/pagination.html' import pagination %}
+{% block content %}
+    <div style="color: #341711" class="container">
+        <h3 class="text-center mb-3">Книги</h3>
+        {% for book in books %}
+            <div class="row">
+                <div class="col-3">
+                    <img src="static/img/book.png" height="230px" width="230px" alt="image"/>
+                </div>
+                <div class="col">
+                    <h4>{{book.name}}</h4>
+                    <p>Автор: {{book.author}}</p>
+                    <p>Жанр(ы): {{ ', '.join(book.genres) }}</p>
+                    <p>{{book.description}}</p>
+                    <p>Год издания: {{book.year}}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {{pagination(count, page)}}
+{% endblock content %}
