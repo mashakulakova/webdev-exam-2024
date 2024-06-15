@@ -30,54 +30,30 @@ def get_genres():
     cursor.close()
     return roles
 
-def get_user():
-    query = 'SELECT * FROM users'
-    cursor = db.connection().cursor(named_tuple=True)
-    cursor.execute(query)
-    user = cursor.fetchall()
-    cursor.close()
-    return user
-
-def get_roles():
-    query = 'SELECT * FROM roles'
-    cursor = db.connection().cursor(named_tuple=True)
-    cursor.execute(query)
-    roles = cursor.fetchall()
-    cursor.close()
-    return roles
 
 @app.route('/')
 def index():
     books=[]
-    querry = 'SELECT * FROM books ORDER BY year DESC'
+    query = '''
+        SELECT b.*, GROUP_CONCAT(g.name SEPARATOR ', ') AS genres
+        FROM books b
+        LEFT JOIN book_genres bg ON b.id = bg.book_id
+        LEFT JOIN genres g ON bg.genre_id = g.id
+        GROUP BY b.id
+        ORDER BY b.year DESC;
+    '''
     page = int(request.args.get('page', 1))
     count = 0
     try:
         cursor = db.connection().cursor(named_tuple=True)
-        cursor.execute(querry)
+        cursor.execute(query)
         books = cursor.fetchall()
         cursor.close()
         count = math.ceil(len(books) / PER_PAGE)
     except mysql.connector.errors.DatabaseError:
         db.connection().rollback()
-        flash('Произошла ошибка при загрузке страницы.', 'danger')
+        flash('Произошла ошибка при загрузке страницы!', 'danger')
     return render_template('index.html', books=books[PER_PAGE * (page - 1) : PER_PAGE * page], count=count, page=page)
-
-
-#@app.route('/users/')
-#@login_required
-#def show_users():
-    query = '''
-        SELECT users.*, roles.name as role_name
-        FROM users
-        LEFT JOIN roles
-        on roles.id = users.role_id
-        '''
-    cursor = db.connection().cursor(named_tuple=True)
-    cursor.execute(query)
-    users = cursor.fetchall()
-    cursor.close()
-    return render_template('users/index.html',users=users)
 
 
 @app.route('/books/create', methods = ['POST', 'GET'])
