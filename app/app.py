@@ -74,20 +74,26 @@ def get_genres_book(book_id):
 @app.route('/')
 def index():
     books=[]
-    querry = 'SELECT * FROM books ORDER BY year DESC'
+    query = '''
+        SELECT b.*, GROUP_CONCAT(g.name SEPARATOR ', ') AS genres
+        FROM books b
+        LEFT JOIN book_genres bg ON b.id = bg.book_id
+        LEFT JOIN genres g ON bg.genre_id = g.id
+        GROUP BY b.id
+        ORDER BY b.year DESC;
+    '''
     page = int(request.args.get('page', 1))
     count = 0
     try:
         cursor = db.connection().cursor(named_tuple=True)
-        cursor.execute(querry)
+        cursor.execute(query)
         books = cursor.fetchall()
         cursor.close()
         count = math.ceil(len(books) / PER_PAGE)
     except mysql.connector.errors.DatabaseError:
         db.connection().rollback()
-        flash('Произошла ошибка при загрузке страницы.', 'danger')
+        flash('Произошла ошибка при загрузке страницы!', 'danger')
     return render_template('index.html', books=books[PER_PAGE * (page - 1) : PER_PAGE * page], count=count, page=page)
-
 
 @app.route('/books/create', methods = ['POST', 'GET'])
 @login_required
@@ -146,7 +152,6 @@ def show(book_id):
     cursor.close()
     return render_template('books/show.html', book = book, genres = get_genres_book(book_id))
 
-
 @app.route('/books/edit/<int:book_id>', methods=["POST", "GET"])
 @login_required
 @check_rights('edit')
@@ -179,12 +184,14 @@ def edit(book_id):
                 query = "INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)"
                 cursor.execute(query, (book_id, genre_id,))
                 db.connection().commit()
+
+            flash(f'Книга {name} успешно отредактирована.', 'success')
             cursor.close()
             return render_template('books/edit.html', book=get_book(book_id), genres=get_genres())
 
         except mysql.connector.errors.DatabaseError as err:
             db.connection().rollback()
-            flash(f'При обновлении пользователя произошла ошибка.{err}', 'danger')
+            flash(f'При редактировании книги произошла ошибка.{err}', 'danger')
             
             return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
         

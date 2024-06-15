@@ -31,7 +31,7 @@ def check_rights(action):
             if current_user.can(action, user):
                 return func(*args, **kwargs)
             else:
-                flash("У Вас нет прав.", "danger")
+                flash("У Вас недостаточно прав для выполнения данного действия.", "danger")
                 return redirect(url_for('index'))
         return wrapper
     return decorator
