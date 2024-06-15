@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% from 'books/form.html' import form_book %}
 {% block content %}
-    <div class="container pb-5 pt-3">
-        <h1>Редактирование книги</h1>
-      {{form_book(url_for('edit', book_id=book.id), book=book, genres=genres) }}
-    </div>
+<div class="container pb-5 pt-3">
+    <h1>Редактирование книги</h1>
+    {{ form_book(url_for('edit', book_id=book.id), book=book, genres=genres) }}
+</div>
 {% endblock %}

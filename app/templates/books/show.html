@@ -22,7 +22,7 @@
                 <td>{{book.year}}</td>
                 <td>{{book.publishing}}</td>
                 <td>{{book.pages}}</td>
-                <td>{{book.genres}}</td>
+                <td>{% for genre in genres %}<p> {{ genre }}</p> {% endfor %}</td>
               </tr>
             </tbody>
           </table>

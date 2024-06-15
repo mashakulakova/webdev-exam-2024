@@ -30,29 +30,62 @@ def get_genres():
     cursor.close()
     return roles
 
+def get_user():
+    query = 'SELECT * FROM users'
+    cursor = db.connection().cursor(named_tuple=True)
+    cursor.execute(query)
+    user = cursor.fetchall()
+    cursor.close()
+    return user
+
+def get_roles():
+    query = 'SELECT * FROM roles'
+    cursor = db.connection().cursor(named_tuple=True)
+    cursor.execute(query)
+    roles = cursor.fetchall()
+    cursor.close()
+    return roles
+
+def get_book(book_id):
+    query = 'SELECT * FROM books WHERE id=%s'
+    cursor = db.connection().cursor(named_tuple=True)
+    cursor.execute(query, (book_id,))
+    book = cursor.fetchone()
+    cursor.close()
+    return book
+
+def get_genres_book(book_id):
+    
+    query = """
+    SELECT g.name 
+    FROM genres g 
+    JOIN book_genres gb ON g.id = gb.genre_id 
+    WHERE gb.book_id = %s
+    """
+    cursor = db.connection().cursor(named_tuple=True)
+    cursor.execute(query, (book_id,))
+    genres = [row[0] for row in cursor.fetchall()]
+    
+    cursor.close()
+    
+    return genres
+
 
 @app.route('/')
 def index():
     books=[]
-    query = '''
-        SELECT b.*, GROUP_CONCAT(g.name SEPARATOR ', ') AS genres
-        FROM books b
-        LEFT JOIN book_genres bg ON b.id = bg.book_id
-        LEFT JOIN genres g ON bg.genre_id = g.id
-        GROUP BY b.id
-        ORDER BY b.year DESC;
-    '''
+    querry = 'SELECT * FROM books ORDER BY year DESC'
     page = int(request.args.get('page', 1))
     count = 0
     try:
         cursor = db.connection().cursor(named_tuple=True)
-        cursor.execute(query)
+        cursor.execute(querry)
         books = cursor.fetchall()
         cursor.close()
         count = math.ceil(len(books) / PER_PAGE)
     except mysql.connector.errors.DatabaseError:
         db.connection().rollback()
-        flash('Произошла ошибка при загрузке страницы!', 'danger')
+        flash('Произошла ошибка при загрузке страницы.', 'danger')
     return render_template('index.html', books=books[PER_PAGE * (page - 1) : PER_PAGE * page], count=count, page=page)
 
 
@@ -67,6 +100,7 @@ def create():
         publishing = request.form['publishing']
         author = request.form['author']
         pages = request.form['pages']
+        genres = request.form.getlist('genres')
         try:
             querry = '''
                 insert into books (name, description, year, publishing, author, pages)
@@ -75,6 +109,22 @@ def create():
             cursor = db.connection().cursor(named_tuple=True)
             cursor.execute(querry, (name, description, year, publishing, author, pages))
             db.connection().commit()
+            if not genres:
+                flash('Выберите жанр', 'warning')
+                return render_template('books/edit.html', genres = get_genres())
+            cursor.close()
+            cursor = db.connection().cursor(named_tuple=True)
+
+            querry = '''
+                SELECT id FROM books where name=%s and description=%s
+                '''
+            cursor.execute(querry, (name, description, ))
+            book_id = cursor.fetchone()
+            for genre_id in genres:
+                query = "INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)"
+                cursor.execute(query, (book_id[0], genre_id,))
+                db.connection().commit()
+            
             flash(f'Книга {name} успешно добавлена.', 'success')
             cursor.close()
         except mysql.connector.errors.DatabaseError:
@@ -82,7 +132,7 @@ def create():
             flash(f'При добавлении книги произошла ошибка.', 'danger')
             return render_template('books/create.html')
 
-    return render_template('books/create.html')
+    return render_template('books/create.html', genres = get_genres())
 
 
 @app.route('/books/show/<int:book_id>')
@@ -94,7 +144,7 @@ def show(book_id):
     cursor.execute(querry, (book_id,))
     book = cursor.fetchone()
     cursor.close()
-    return render_template('books/show.html', book = book)
+    return render_template('books/show.html', book = book, genres = get_genres_book(book_id))
 
 
 @app.route('/books/edit/<int:book_id>', methods=["POST", "GET"])
@@ -108,41 +158,37 @@ def edit(book_id):
         publishing = request.form['publishing']
         author = request.form['author']
         pages = request.form['pages']
+        genres = request.form.getlist('genres')
+        
         try:
-            if current_user.is_admin() and current_user.is_moderator():
-                role_id = request.form['role_id']
-                query = '''
-                    UPDATE users set first_name = %s, last_name = %s, middle_name = %s, role_id = %s where id = %s
-                    '''
-                cursor = db.connection().cursor(named_tuple=True)
-                cursor.execute(query, (first_name, last_name, middle_name, role_id, user_id))
-                db.connection().commit()
-            else:
-                query = '''
-                    UPDATE users set first_name = %s, last_name = %s, middle_name = %s where id = %s
-                    '''
-                cursor = db.connection().cursor(named_tuple=True)
-                cursor.execute(query, (first_name, last_name, middle_name, user_id))
-                db.connection().commit()
-            flash(f'Данные пользователя {first_name} успешно обновлены.', 'success')
-            cursor.close()
-        except mysql.connector.errors.DatabaseError:
-            db.connection().rollback()
-            flash(f'При обновлении пользователя произошла ошибка.', 'danger')
-            return render_template('users/edit.html')
+            query = '''
+            UPDATE books set name = %s, description = %s, year = %s, publishing = %s, author = %s, pages = %s where id = %s
+            '''
+            cursor = db.connection().cursor(named_tuple=True)
+            cursor.execute(query, (name, description, year, publishing, author, pages, book_id,))
+            db.connection().commit()
+            if not genres:
+                flash('Выберите жанр', 'warning')
+                return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
+            
+            query = "DELETE FROM book_genres WHERE book_id = %s"
+            cursor.execute(query, (book_id,))
+            db.connection().commit()
 
-    query = '''
-        SELECT users.*, roles.name as role_name
-        FROM users
-        LEFT JOIN roles
-        on roles.id = users.role_id
-        where users.id=%s
-        '''
-    cursor = db.connection().cursor(named_tuple=True)
-    cursor.execute(query, (user_id,))
-    user = cursor.fetchone()
-    cursor.close()
-    return render_template('users/edit.html', user=user, roles=roles)
+            for genre_id in genres:
+                query = "INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)"
+                cursor.execute(query, (book_id, genre_id,))
+                db.connection().commit()
+            cursor.close()
+            return render_template('books/edit.html', book=get_book(book_id), genres=get_genres())
+
+        except mysql.connector.errors.DatabaseError as err:
+            db.connection().rollback()
+            flash(f'При обновлении пользователя произошла ошибка.{err}', 'danger')
+            
+            return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
+        
+    return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
 
 @app.route('/books/delete/')
 @login_required
