@@ -185,6 +185,6 @@ def delete():
     except mysql.connector.errors.DatabaseError:
         db.connection().rollback()
         flash(f'При удалении книги произошла ошибка.', 'danger')
-        return render_template('books/index.html', book_id=book_id)
+        return render_template('index.html', book_id=book_id)
 
     return redirect(url_for('index'))
