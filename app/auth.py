@@ -38,28 +38,27 @@ def check_rights(action):
 
 
 class User(UserMixin):
-    def __init__(self, user_id, user_login, role_id):
+    def __init__(self, user_id, user_login, role_id, last_name, first_name, middle_name=None):
         self.id = user_id
         self.login = user_login
         self.role_id = role_id
+        self.last_name = last_name
+        self.first_name = first_name
+        self.middle_name = middle_name
     def is_admin(self):
         return self.role_id == ADMIN_ROLE_ID
     def is_moderator(self):
         return self.role_id == MODER_ROLE_ID   
-    def can(self, action):
-        if self.role_id:
-            if action == 'create':
-                return self.is_admin()
-            elif action == 'edit':
-                return self.is_admin() or self.is_moderator()
-            elif action == 'delete':
-                return self.is_admin()
-            elif action == 'show':
-                return True
+    def can(self, action, record = None):
+        check_user = CheckUser(record)
+        method = getattr(check_user, action, None)
+        if method:
+            return method()
         return False
+    
     @property
-    def fio(self): 
-        return f'{self.last_name} {self.first_name} {self.middle_name or ""}'
+    def fio(self):
+        return f"{self.last_name} {self.first_name} {self.middle_name or ''}"
 
 
 def load_user(user_id):
@@ -69,8 +68,9 @@ def load_user(user_id):
     user = cursor.fetchone()
     cursor.close()
     if user:
-        return User(user.id, user.login, user.role_id)
+        return User(user.id, user.login, user.role_id, user.last_name, user.first_name, user.middle_name)
     return None
+
 
 @bp_auth.route('/login', methods = ['POST', 'GET'])
 def login():
@@ -84,7 +84,7 @@ def login():
         user = cursor.fetchone()
         cursor.close()
         if user:
-            login_user(User(user.id, user.login, user.role_id), remember=check)
+            login_user(User(user.id, user.login, user.role_id, user.last_name, user.first_name, user.middle_name), remember=check)
             param_url = request.args.get('next')
             flash('Вы успешно вошли!', 'success')
             return redirect(param_url or url_for('index'))

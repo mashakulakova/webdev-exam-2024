@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container my-3">
+        <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Название</th>
+                <th scope="col">Автор</th>
+                <th scope="col">Краткое описание</th>
+                <th scope="col">Год издания</th>
+                <th scope="col">Издательство</th>
+                <th scope="col">Объем</th>
+                <th scope="col">Жанр(ы)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{book.name}}</td>
+                <td>{{book.author}}</td>
+                <td>{{book.description}}</td>
+                <td>{{book.year}}</td>
+                <td>{{book.publishing}}</td>
+                <td>{{book.pages}}</td>
+                <td>{{book.genres}}</td>
+              </tr>
+            </tbody>
+          </table>
+    </div>
+{% endblock %}

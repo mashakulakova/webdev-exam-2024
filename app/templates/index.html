@@ -13,10 +13,36 @@
                     <p>Автор: {{book.author}}</p>
                     <p>Жанр(ы): {{ ', '.join(book.genres) }}</p>
                     <p>{{book.description}}</p>
-                    <p>Год издания: {{book.year}}</p>
+                </div>
+                <div class="text-center">
+                    {% if current_user.is_authenticated and current_user.can('show') %}
+                        <a class="btn btn-success" href="{{url_for('show', book_id=book.id)}}">Просмотр</a>
+                    {% endif %}
+                    {% if current_user.is_authenticated and current_user.can('edit') %}
+                        <a class="btn btn-warning" href="{{url_for('edit', book_id=book.id)}}">Редактирование</a>
+                    {% endif %}
+                    {% if current_user.is_authenticated and current_user.can('delete') %}
+                    <a class="btn btn-danger delete" data-bs-toggle="modal" data-bs-target="#deleteModal_{{book.id}}">Удаление</a>
+                    <div class="modal fade" id="deleteModal_{{book.id}}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel">Удаление книги</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="mx-auto my-5">Вы уверены, что хотите удалить книгу "{{book.name}}"?</div>
+                                <div class="modal-footer">
+                                    <a type="button" class="btn btn-danger" href="{{url_for('delete', book_id=book.id)}}">Да</a>
+                                    <a type="button" class="btn btn-dark" data-bs-dismiss="modal">Нет</a>
+                                </div>
+                            </div>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
+        {{pagination(count, page)}}
     </div>
-    {{pagination(count, page)}}
 {% endblock content %}
