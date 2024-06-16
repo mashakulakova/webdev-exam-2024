@@ -197,26 +197,6 @@ def edit(book_id):
         
     return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
 
-#@app.route('/books/delete/')
-#@login_required
-#@check_rights('delete')
-#def delete():
-    try:
-        book_id = request.args.get('book_id')
-        querry = '''
-            DELETE from books where id = %s
-            '''
-        cursor = db.connection().cursor(named_tuple=True)
-        cursor.execute(querry, (book_id,))
-        db.connection().commit()
-        flash(f'Книга успешно удалена.', 'success')
-        cursor.close()
-    except mysql.connector.errors.DatabaseError:
-        db.connection().rollback()
-        flash(f'При удалении книги произошла ошибка.', 'danger')
-        return render_template('index.html', book_id=book_id)
-
-    return redirect(url_for('index'))
 
 @app.route('/books/delete/')  
 @login_required  
