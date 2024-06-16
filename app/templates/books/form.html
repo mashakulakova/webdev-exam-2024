@@ -68,7 +68,7 @@
   </div>
   <div class="mb-3">
       <label for="genres" class="form-label">Жанры</label>
-      <select multiple class="form-control" name="genres" id="genres" {% if request.endpoint == 'create' %} required {% endif %}>
+      <select class="form-control" name="genres" id="genres" multiple {% if request.endpoint == 'create' %} required {% endif %}>
           {% for genre in genres %}
           <option value="{{ genre.id }}" {% if book and genre.id in book.genre_ids %}selected{% endif %}>{{ genre.name }}</option>
           {% endfor %}
