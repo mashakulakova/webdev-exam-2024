@@ -20,7 +20,7 @@ app.jinja_env.globals.update(current_user=current_user)
 
 init_login_manager(app)
 
-PER_PAGE = 6
+PER_PAGE = 3
 
 def get_genres():
     query = 'SELECT * FROM genres'
@@ -197,10 +197,10 @@ def edit(book_id):
         
     return render_template('books/edit.html', book = get_book(book_id), genres = get_genres())
 
-@app.route('/books/delete/')
-@login_required
-@check_rights('delete')
-def delete():
+#@app.route('/books/delete/')
+#@login_required
+#@check_rights('delete')
+#def delete():
     try:
         book_id = request.args.get('book_id')
         querry = '''
@@ -216,4 +216,34 @@ def delete():
         flash(f'При удалении книги произошла ошибка.', 'danger')
         return render_template('index.html', book_id=book_id)
 
+    return redirect(url_for('index'))
+
+@app.route('/books/delete/')  
+@login_required  
+@check_rights('delete')  
+def delete():
+    genres = request.form.getlist('genres')
+    page = int(request.args.get('page', 1))
+    count = 0
+    try:  
+        book_id = request.args.get('book_id')
+        querry = "DELETE FROM books WHERE id = %s"
+        cursor = db.connection().cursor(named_tuple=True)  
+        cursor.execute(querry, (book_id,))  
+        db.connection().commit()
+
+        for genre_id in genres:
+            query = "DELETE FROM book_genres WHERE book_id = %s AND genre_id = %s"
+            cursor.execute(query, (book_id, genre_id,))
+            db.connection().commit()
+
+        db.connection().commit()  
+        flash(f'Книга успешно удалена.', 'success')  
+        cursor.close()
+
+    except mysql.connector.errors.DatabaseError:  
+        db.connection().rollback()  
+        flash(f'При удалении книги произошла ошибка.', 'danger')  
+        return render_template('index.html', book=get_book(book_id), genres=get_genres(), page=page, count=count)
+  
     return redirect(url_for('index'))
